@@ -47,47 +47,37 @@ function closeDB() {
 function insertSubsite(req, res, next) {
 	connectDB();
 	var date_time = getDateTime();
-	var insert_query = "INSERT INTO spssites_subsites VALUES ('" + req.params.site + "', '" + req.params.subsite + "', 0, 'S','" + date_time + "', NULL)";
-	con.query(insert_query, function (error, results, fields) {
-	  	if (error) throw error;
-	  	console.log('Subsite ' + req.params.subsite + ' inserted!');
-	});
+	for(var subsite in req.body.subsites) {			
+		var insert_query = "INSERT INTO spssites_subsites VALUES ('" + req.body.site + "', '" + req.body.subsites[subsite] + "', 0, 'S','" + date_time + "', NULL)";
+		con.query(insert_query, function (error, results, fields) {
+	  		if (error) throw error; 
+			console.log('Subsite inserted!');	  		
+		});
+	}
 	closeDB();
-    res.end();
+	res.send(200, 'All subsites was inserted successfully.');
 }
 
 // Función para remover el subsite de la tabla
 function deleteSubsite(req, res, next) {
 	connectDB();
-	var delete_query = "DELETE FROM spssites_subsites WHERE idsite = '" + req.params.site + "' AND idsubsite = '" + req.params.subsite + "'";
-	con.query(delete_query, function (error, results, fields) {
-	  	if (error) throw error;
-	  	console.log('Subsite ' + req.params.subsite + ' deleted!');
-	});
+	for(var subsite in req.body.subsites) {
+		var delete_query = "DELETE FROM spssites_subsites WHERE idsite = '" + req.body.site + "' AND idsubsite = '" + req.body.subsites[subsite] + "'";
+		con.query(delete_query, function (error, results, fields) {
+	  		if (error) throw error;
+	  		console.log('Subsite ' + req.body.subsites[subsite] + ' deleted!');
+		});
+	}
 	closeDB();
-    res.end();
-}
-
-// Función para replicar el sitio
-function replicateSite(site) {
-	curl.get('http://' + coretx_url + '/replication/site/' + site, function(err, response, body) {
-		if (err) throw err;
-		console.log(body);
-		console.log('Site replicated!');
-	});
-}
-
-function printRequest(req, res, next) {
-	console.log('--------------------------');
-	console.log(req.params.msg);
-	console.log('--------------------------');
- 	next();
+	res.send(200, 'All subsites was deleted successfully.');
 }
 
 var server = restify.createServer();
-server.get('/print/:msg', printRequest);
-server.post('/sites/:site/subsites/:subsite', insertSubsite);
-server.del('/sites/:site/subsites/:subsite', deleteSubsite);
+
+server.use(restify.bodyParser());
+
+server.post('/sites/subsites', insertSubsite);
+server.del('/sites/subsites', deleteSubsite);
 
 server.listen('8080', function() {
 	console.log('%s listening at %s', server.name, server.url);
