@@ -11,7 +11,9 @@
   "dependencies": {
     "curl": "^0.1.4",
     "curlrequest": "^1.0.1",
+    "fs": "0.0.1-security",
     "http": "0.0.0",
+    "jsonfile": "^3.0.0",
     "mysql": "^2.13.0",
     "request": "^2.81.0",
     "request-json": "^0.6.2",
