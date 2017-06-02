@@ -48,8 +48,8 @@ function editDtxTest(req, res, next) {
 	var fileName = req.body;
 	var file = require(fileName);
 	
-	file.item[1].request.url =  'http://localhost:19000/replication/site/' + site;
-	file.item[5].request.url =  'http://localhost:19000/replication/site/' + site;
+	file.item[1].request.url =  'http://localhost:{{port_replication}}/replication/site/' + site;
+	file.item[5].request.url =  'http://localhost:{{port_replication}}/replication/site/' + site;
 
 	var raw_json = JSON.parse(file.item[3].request.body.raw);
 	
