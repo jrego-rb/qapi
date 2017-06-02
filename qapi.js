@@ -1,7 +1,5 @@
 var restify = require('restify');
 var mysql = require('mysql');
-var http = require('http');
-var curl = require('curlrequest');
 var fs = require('fs');
 var db_values = require('./db.json');
 
@@ -139,6 +137,3 @@ server.del('/sites/subsites', deleteSubsite);
 server.listen('8080', function() {
 	console.log('%s listening at %s', server.name, server.url);
 });
-
-
-//curl.request({url:'http://localhost:8080/sites/03101986/subsites/03101988', method:'POST'});
