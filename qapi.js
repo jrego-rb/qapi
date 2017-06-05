@@ -1,6 +1,5 @@
 var restify = require('restify');
 var mysql = require('mysql');
-var fs = require('fs');
 var db_values = require('./db.json');
 
 var con = false;
@@ -9,9 +8,6 @@ var coretx_url = process.env.CORETX_URL
 var site = '';
 var subsites_list = '';
 
-String.prototype.escapeSpecialChars = function() {
-    return this.replace(/,/g, ",\n").replace(/{\"/g, "{\n\"").replace('[', '[\n').replace('},\n', '\n},\n').replace('}]', '}\n]\n');
-};
 
 // Función para tomar la fecha actual y darle el formato YYYY-MM-DD HH:MM:SS
 function getDateTime() {
@@ -31,52 +27,6 @@ function getDateTime() {
 
 }
 
-function setParameters(req, res, next) {
-	parameters = req.params;		
-	if (parameters.site) {
-		site = parameters.site;
-	}
-	if (parameters.subsites) {
-		subsites_list = parameters.subsites.split(',');		
-	}
-	res.send('200', 'Parameters was set succesfully.');
-}
-
-function editDtxTest(req, res, next) {
-	var fileName = req.body;
-	var file = require(fileName);
-	
-	file.item[1].request.url =  'http://localhost:{{port_replication}}/replication/site/' + site;
-	file.item[5].request.url =  'http://localhost:{{port_replication}}/replication/site/' + site;
-
-	var raw_json = JSON.parse(file.item[3].request.body.raw);
-	
-	raw_json.amount = 1000 * subsites_list.length;
-
-	for (i = 0; i < subsites_list.length; i++) {
-		raw_json.sub_payments[i].site_id = subsites_list[i];
-		raw_json.sub_payments[i].installments = 5;
-		raw_json.sub_payments[i].amount = 1000;			
-		console.log('agregado el subsite');	
-	}
-
-	string_raw = JSON.stringify(raw_json);
-
-	escaped_string_raw = string_raw.escapeSpecialChars();
-
-	file.item[3].request.body.raw = escaped_string_raw;
-
-	fs.writeFileSync(fileName, JSON.stringify(file, null, 2), function (err) {
-	if (err) return console.log(err);
-		console.log(JSON.stringify(file));
-		console.log('writing to ' + fileName);
-	});
-
-	res.send(200, 'Iteration Data file was edited successfully.');
-}
-
-
-
 // Función para conectarse a la base
 function connectDB() {
 	con = mysql.createConnection(db_values);
@@ -85,7 +35,6 @@ function connectDB() {
 	  	console.log("Connected!");
 	});
 }
-
 
 // Función para cerrar la conexión a la base
 function closeDB() {
@@ -99,6 +48,9 @@ function closeDB() {
 function insertSubsite(req, res, next) {
 	connectDB();
 	var date_time = getDateTime();
+	site = req.params.site;
+	subsites_list = req.params.subsites;
+	console.log(subsites_list);	
 	for(i = 0; i < subsites_list.length; i++) {			
 		var insert_query = "INSERT INTO spssites_subsites VALUES ('" + site + "', '" + subsites_list[i] + "', 0, 'S','" + date_time + "', NULL)";
 		con.query(insert_query, function (error, results, fields) {
@@ -113,6 +65,8 @@ function insertSubsite(req, res, next) {
 // Función para remover el subsite de la tabla
 function deleteSubsite(req, res, next) {
 	connectDB();
+	site = req.params.site;
+	subsites_list = req.params.subsites;
 	for(i = 0; i < subsites_list.length; i++) {
 		var delete_query = "DELETE FROM spssites_subsites WHERE idsite = '" + site + "' AND idsubsite = '" + subsites_list[i] + "'";
 		con.query(delete_query, function (error, results, fields) {
@@ -129,8 +83,6 @@ var server = restify.createServer();
 
 server.use(restify.bodyParser());
 
-server.post('/newman/parameters', setParameters);
-server.post('/newman/parameters/dtx', editDtxTest);
 server.post('/sites/subsites', insertSubsite);
 server.del('/sites/subsites', deleteSubsite);
 
