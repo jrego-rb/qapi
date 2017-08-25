@@ -44,6 +44,63 @@ function closeDB() {
 	});
 }
 
+
+// Función para activar CyberSource en un sitio
+function setAgregador(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	var update_query = "UPDATE spssites SET agregador = 'S' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('Agregador enabled!');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'The site was edited successfully.');}), 3000);	  		
+}
+
+function unsetAgregador(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	var update_query = "UPDATE spssites SET agregador = 'N' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('Agregador enabled!');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'The site was edited successfully.');}), 3000);	  		
+}
+
+function setCS(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	modelo = req.params.modelo;
+	mid = req.params.mid;
+	rubro = req.params.rubro;
+	continuar = req.params.continuar;
+	reverso = req.params.reverso;	
+	security_key = req.params.security_key;
+	var update_query = "UPDATE spssites SET flagcs = 'S', modelocs = '" + modelo + "', mid = '" + mid + "', securitykey = '" + security_key + "', rubro = '" + rubro + "', autorizaseguir = '" + continuar + "', csreversiontimeout = '" + reverso + "' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('CS enabled!');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'The site was edited successfully.');}), 3000);	  		
+}
+
+// Función para desactivar CyberSource en un sitio
+function unsetCS(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	var update_query = "UPDATE spssites SET flagcs = 'N', modelocs = NULL, mid = '', securitykey = '', rubro = NULL, autorizaseguir = 'N', csreversiontimeout = 'N' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('CS disabled!');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'The site was edited successfully.');}), 3000);	  		
+}
+
 // Función para insertar el subsite en la tabla
 function insertSubsite(req, res, next) {
 	connectDB();
@@ -75,8 +132,7 @@ function deleteSubsite(req, res, next) {
 		});
 	}
 	closeDB();
-	setTimeout((function() {res.send(200, 'All subsites was deleted successfully.');}), 3000);
-	
+	setTimeout((function() {res.send(200, 'All subsites was deleted successfully.');}), 3000);	
 }
 
 var server = restify.createServer();
@@ -84,7 +140,11 @@ var server = restify.createServer();
 server.use(restify.bodyParser());
 
 server.post('/sites/subsites', insertSubsite);
+server.post('/sites/agregador', setAgregador);
+server.post('/sites/cs', setCS);
 server.del('/sites/subsites', deleteSubsite);
+server.del('/sites/cs', unsetCS);
+server.del('/sites/agregador', unsetAgregador);
 
 server.listen('8080', function() {
 	console.log('%s listening at %s', server.name, server.url);
