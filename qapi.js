@@ -101,6 +101,32 @@ function unsetCS(req, res, next) {
 	setTimeout((function() {res.send(200, 'The site was edited successfully.');}), 3000);	  		
 }
 
+function setDosPasos(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	medio_de_pago = req.params.medio_de_pago;
+	var update_query = "UPDATE spsmedpagotienda SET autorizaendospasos = 'S' WHERE idsite = '" + site + "' AND idmediopago = '" + medio_de_pago + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('Autoriza en dos Pasos enabled!');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'The site was edited successfully.');}), 3000);	  		
+}
+
+function unsetDosPasos(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	medio_de_pago = req.params.medio_de_pago;
+	var update_query = "UPDATE spsmedpagotienda SET autorizaendospasos = 'N' WHERE idsite = '" + site + "' AND idmediopago = '" + medio_de_pago + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('Autoriza en dos Pasos disabled!');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'The site was edited successfully.');}), 3000);	  		
+}
+
 // Función para insertar el subsite en la tabla
 function insertSubsite(req, res, next) {
 	connectDB();
@@ -142,9 +168,11 @@ server.use(restify.bodyParser());
 server.post('/sites/subsites', insertSubsite);
 server.post('/sites/agregador', setAgregador);
 server.post('/sites/cs', setCS);
+server.post('/sites/dospasos', setDosPasos);
 server.del('/sites/subsites', deleteSubsite);
 server.del('/sites/cs', unsetCS);
 server.del('/sites/agregador', unsetAgregador);
+server.del('/sites/dospasos', unsetDosPasos);
 
 server.listen('8080', function() {
 	console.log('%s listening at %s', server.name, server.url);
