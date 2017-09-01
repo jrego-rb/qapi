@@ -94,7 +94,7 @@ function unsetPorcentaje(req, res, next) {
 		if (error) throw error; 
 		console.log('Pago por monto disabled!');
 	});
-	var update_query = "UPDATE spssites_subsites SET porcentaje = '0', activo = 'N' WHERE idsite = '" + site + "'";
+	var update_query = "UPDATE spssites_subsites SET porcentaje = '0' WHERE idsite = '" + site + "'";
 	con.query(update_query, function (error, results, fields) {
 		if (error) throw error; 
 		console.log('Se reestablecieron los subsites a porcentaje cero.');
