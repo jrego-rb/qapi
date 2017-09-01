@@ -177,8 +177,9 @@ function insertSubsite(req, res, next) {
 	connectDB();
 	var date_time = getDateTime();
 	site = req.params.site;
-	subsites_list = req.params.subsites;
-	console.log(subsites_list);	
+	subsites_list_raw = req.params.subsites;
+	console.log(subsites_list);
+	var subsites_list = subsites_list_raw.split(',');	
 	for(i = 0; i < subsites_list.length; i++) {			
 		var insert_query = "INSERT INTO spssites_subsites VALUES ('" + site + "', '" + subsites_list[i] + "', 0, 'S','" + date_time + "', NULL)";
 		con.query(insert_query, function (error, results, fields) {
