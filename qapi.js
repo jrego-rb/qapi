@@ -184,9 +184,14 @@ function insertSubsite(req, res, next) {
 		var insert_query = "INSERT INTO spssites_subsites VALUES ('" + site + "', '" + subsites_list[i] + "', 0, 'S','" + date_time + "', NULL)";
 		con.query(insert_query, function (error, results, fields) {
 	  		if (error) throw error; 
-			console.log('Subsite inserted!');	  		
+			console.log('Subsites inserted!');	  		
 		});
 	}
+	var update_query = "UPDATE spssites SET transaccionesdistribuidas = 'S' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('Distributed enabled!');
+	});	
 	closeDB();
 	setTimeout((function() {res.send(200, 'All subsites was inserted successfully.');}), 3000);
 }
@@ -204,6 +209,11 @@ function deleteSubsite(req, res, next) {
 		});
 	}
 	closeDB();
+	var update_query = "UPDATE spssites SET transaccionesdistribuidas = 'N' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('Distributed enabled!');
+	});	
 	setTimeout((function() {res.send(200, 'All subsites was deleted successfully.');}), 3000);	
 }
 
