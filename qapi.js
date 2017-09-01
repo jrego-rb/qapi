@@ -58,6 +58,51 @@ function setAgregador(req, res, next) {
 	setTimeout((function() {res.send(200, 'The site was edited successfully.');}), 3000);	  		
 }
 
+// Función para activar distribuidas por porcentaje en un sitio
+function setPorcentaje(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	// calcula el valor porcentual dependiendo de la cantidad de subsites, dejando margen para el site padre	
+	var count_query = "SELECT COUNT (DISTINCT idsubsite) AS total FROM spssites_subsites WHERE idsite = '" + site + "'";		
+
+	con.query(count_query, function (error, results, fields) {
+		if (error) throw error;				
+		var count = results[0].total;					
+		console.log('Se encontraron ' + String(count) + ' subsites registrados');	
+		valor_porcentaje = String(Math.floor(90 / count));
+		var update_query = "UPDATE spssites SET montoporcent = 'P' WHERE idsite = '" + site + "'";	
+		con.query(update_query, function (error, results, fields) {
+			if (error) throw error; 
+			console.log('Pago porcentual enabled!');
+		});	
+		var update_query = "UPDATE spssites_subsites SET porcentaje = '" + valor_porcentaje + "', activo = 'S' WHERE idsite = '" + site + "'";
+		con.query(update_query, function (error, results, fields) {
+			if (error) throw error; 
+			console.log('Se le configuró a cada subsite un porcentaje de ' + valor_porcentaje + '%');
+		});
+		closeDB();	
+	});
+	setTimeout((function() {res.send(200, 'The site was edited successfully.');}), 3000);	  		
+}
+
+// Función para activar CyberSource en un sitio
+function unsetPorcentaje(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	var update_query = "UPDATE spssites SET montoporcent = 'M' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('Pago por monto disabled!');
+	});
+	var update_query = "UPDATE spssites_subsites SET porcentaje = '0', activo = 'N' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('Se reestablecieron los subsites a porcentaje cero.');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'The site was edited successfully.');}), 3000);	  		
+}
+
 function unsetAgregador(req, res, next) {
 	connectDB();
 	site = req.params.site;
@@ -169,10 +214,12 @@ server.post('/sites/subsites', insertSubsite);
 server.post('/sites/agregador', setAgregador);
 server.post('/sites/cs', setCS);
 server.post('/sites/dospasos', setDosPasos);
+server.post('/sites/porcentaje', setPorcentaje);
 server.del('/sites/subsites', deleteSubsite);
 server.del('/sites/cs', unsetCS);
 server.del('/sites/agregador', unsetAgregador);
 server.del('/sites/dospasos', unsetDosPasos);
+server.del('/sites/porcentaje', unsetPorcentaje);
 
 server.listen('8080', function() {
 	console.log('%s listening at %s', server.name, server.url);
