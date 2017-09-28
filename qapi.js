@@ -178,15 +178,22 @@ function insertSubsite(req, res, next) {
 	var date_time = getDateTime();
 	site = req.params.site;
 	subsites_list_raw = req.params.subsites;
-	console.log(subsites_list);
 	var subsites_list = subsites_list_raw.split(',');	
-	for(i = 0; i < subsites_list.length; i++) {			
+	for(i = 0; i < subsites_list.length; i++) {
+// Primero elimina los subsites repetidos para que no se acumulen	
+		var delete_query = "DELETE FROM spssites_subsites WHERE idsite = '" + site + "' AND idsubsite = '" + subsites_list[i] + "'";
+		con.query(delete_query, function (error, results, fields) {
+	  		if (error) throw error;
+	  		console.log('Subsite deleted!');
+		});			
+// Ahora sí, inserta los subsites requeridos
 		var insert_query = "INSERT INTO spssites_subsites VALUES ('" + site + "', '" + subsites_list[i] + "', 0, 'S','" + date_time + "', NULL)";
 		con.query(insert_query, function (error, results, fields) {
 	  		if (error) throw error; 
 			console.log('Subsites inserted!');	  		
 		});
 	}
+// Actualiza el site para que permita transacciones distribuidas
 	var update_query = "UPDATE spssites SET transaccionesdistribuidas = 'S' WHERE idsite = '" + site + "'";
 	con.query(update_query, function (error, results, fields) {
 		if (error) throw error; 
@@ -196,24 +203,27 @@ function insertSubsite(req, res, next) {
 	setTimeout((function() {res.send(200, 'All subsites was inserted successfully.');}), 3000);
 }
 
-// Función para remover el subsite de la tabla
+// Función para remover los subsites de la tabla
 function deleteSubsite(req, res, next) {
 	connectDB();
 	site = req.params.site;
-	subsites_list = req.params.subsites;
-	for(i = 0; i < subsites_list.length; i++) {
+	subsites_list_raw = req.params.subsites;
+	var subsites_list = subsites_list_raw.split(',');
+	for(i = 0; i < subsites_list.length; i++) {		
+// Remueve los subsites de la tabla
 		var delete_query = "DELETE FROM spssites_subsites WHERE idsite = '" + site + "' AND idsubsite = '" + subsites_list[i] + "'";
 		con.query(delete_query, function (error, results, fields) {
 	  		if (error) throw error;
 	  		console.log('Subsite deleted!');
 		});
 	}
-	closeDB();
+// Actualiza el site para que NO permita transacciones distribuidas
 	var update_query = "UPDATE spssites SET transaccionesdistribuidas = 'N' WHERE idsite = '" + site + "'";
 	con.query(update_query, function (error, results, fields) {
 		if (error) throw error; 
 		console.log('Distributed enabled!');
-	});	
+	});
+	closeDB();	
 	setTimeout((function() {res.send(200, 'All subsites was deleted successfully.');}), 3000);	
 }
 
