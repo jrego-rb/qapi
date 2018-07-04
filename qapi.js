@@ -6,12 +6,6 @@ var mysql = require('mysql');
 var db_values = {};
 var program = require('commander');
 var version = require('version-healthcheck');
-var redis = require('redis');
-var client = redis.createClient(10050,'marathon-lb.infrastructure.marathon.mesos');
-
-client.on('connect', function() {
-    console.log('connected');
-});
 
 program
   .version('0.1.0')
@@ -20,6 +14,8 @@ program
   .option('-s, --schema [type]', 'Nombre de base de datos a utilizar')
   .option('-u, --user [type]', 'Nombre de usuario a utilizar (encriptado)')
   .option('-w, --pass [type]', 'Password de usuario a utilizar (encriptado)')
+  .option('-r, --redisPort [type]', 'Puerto de Redis a utilizar')
+   .option('-r, --redisHost [type]', 'Host de Redis a utilizar')
   .parse(process.argv);	
 
 
@@ -73,6 +69,24 @@ if (process.env.DB_PASSWORD) {
 } else if (program.pass) {
   db_values.password = decrypt(program.pass);
 }
+
+if (process.env.REDIS_PORT) {
+  redis_port = process.env.REDIS_PORT;
+} else if (program.redisPort) {
+  redis_port = program.redisPort;
+}
+
+if (process.env.REDIS_HOST) {
+  redis_host = process.env.REDIS_HOST;
+} else if (program.redisHost) {
+  redis_host = program.redisHost;
+}
+
+var redis = require('redis');
+var client = redis.createClient(redis_port,redis_host);
+client.on('connect', function() {
+    console.log('connected');
+});
 
 // Función para tomar la fecha actual y darle el formato YYYY-MM-DD HH:MM:SS
 function getDateTime() {
@@ -181,6 +195,32 @@ function unsetTokenization(req, res, next) {
 	con.query(update_query, function (error, results, fields) {
 		if (error) throw error; 
 		console.log('¡Tokenization desconfigurada!');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'El sitio fue editado con éxito.');}), 3000);	  		
+}
+
+// Función para activar tokenization en un sitio
+function setMPOS(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	var update_query = "UPDATE spssites SET mensajeria_mpos = 'S' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('MPOS configurado.');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'El sitio fue editado con éxito.');}), 3000);	  		
+}
+
+// Función para desactivar tokenization en un sitio
+function unsetMPOS(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	var update_query = "UPDATE spssites SET mensajeria_mpos = 'N' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('¡MPOS desconfigurado!');
 	});	
 	closeDB();
 	setTimeout((function() {res.send(200, 'El sitio fue editado con éxito.');}), 3000);	  		
@@ -400,12 +440,12 @@ function deleteMerchant(req, res, next) {
 	setTimeout((function() {res.send(200, 'El merchant fue eliminado con exito.');}), 3000);	
 }
 
-// Función para comprobar si una operación fue insertada en la base con éxito
+// Función para comprobar si una operación fue insertada en la base con éxito a través del charge id
 
 function checkDB(req, res, next) {
 	connectDB();
 	site = req.params.site;
-        charge_id = req.params.charge_id;		
+    charge_id = req.params.charge_id;		
 
 // Chequea si existe
 	var select_query = "SELECT * FROM (SELECT spstransac.idsite, transaccion_operacion_xref.charge_id FROM spstransac INNER JOIN transaccion_operacion_xref ON spstransac.idtransaccion=transaccion_operacion_xref.transaccion_id) AS s WHERE s.idsite = '" + site + "' AND s.charge_id = " + charge_id + "";
@@ -425,40 +465,72 @@ function checkDB(req, res, next) {
 	});		
 }
 
+
+// Función para comprobar si una operación fue insertada en la base con éxito a través del transaction id
+function checkDBbyTx(req, res, next) {
+	connectDB();
+	site = req.params.site;
+    operation_id = req.params.operation_id;		
+
+// Chequea si existe
+	var select_query = "SELECT * FROM (SELECT spstransac.idsite, transaccion_operacion_xref.operation_id FROM spstransac INNER JOIN transaccion_operacion_xref ON spstransac.idtransaccion=transaccion_operacion_xref.transaccion_id) AS s WHERE s.idsite = '" + site + "' AND s.operation_id = " + operation_id + "";
+		console.log(select_query);
+		con.query(select_query, function (error, results, fields) {
+		if (error) throw error;
+		console.log(results);
+		// Si la consulta no vino vacia...		
+		if (results[0] != null) {
+			console.log('Se encontraron ' + results.length + ' resultados en la base de datos.');
+			setTimeout((function() {res.send(200, 'Chequeo de DB exitoso.');}), 3000);
+		// Si en cambio, la consulta vino vacia...
+		} else {	
+			console.log('No existe ninguna transacción con esos valores en la base de datos.');
+			setTimeout((function() {res.send(404, 'No se encontraron transacciones con esos valores en la base de datos.');}), 3000);
+		}   		
+	closeDB();	
+	});		
+}
+
+// Función para chequear si los valores ingresados en Redis coinciden con los ingresados en la base de datos
 function checkRedis(req, res, next) {
 	connectDB();
 	site = req.params.site;
-	redis_value = client.get(req.params.key, function(err, reply) {
-		console.log('dentro del get ', reply);	
-	});        	
-	console.log('fuera del get ', redis_value);
+	get_redis_value = client.get(req.params.key, function(err, redis_value) {
+		console.log('redis_value = ', redis_value);
 
-	// Si el valor de Redis requerido existe...	
-	if (redis_value) { 
-		// Chequea si coincide con el que se obtiene en la base.
-		var select_query = "SELECT " + req.params.row + " FROM " + req.params.table + " order by " + req.params.row + " desc limit 1";
-			con.query(select_query, function (error, results, fields) {
-			if (error) throw error;
-			// Si la consulta no vino vacia...		
-			if (results[0] != null) {
-				console.log(results[0]);			
-				// Si el valor coincide...				
-				if (results[0] === redis_value) {			
-					console.log('El valor de ' + req.params.key + ' está correctamente configurado en Redis.');
-					setTimeout((function() {res.send(200, 'Chequeo de ' + req.params.key + ' exitoso.');}), 3000);
-				// Si el valor no coincide...				
-				} else {
-					console.log('El valor de ' + req.params.key + ' está correctamente configurado en Redis.');
-					setTimeout((function() {res.send(404, 'Chequeo de ' + req.params.key + ' no exitoso. El valor configurado no se corresponde con el mayor valor en la base.');}), 3000);
-				}
-			// Si en cambio, la consulta vino vacia...		
-			} else {	
-				console.log('No se encontró el valor requerido en la base de datos.');
-				setTimeout((function() {res.send(404, 'No se encontró el valor requerido en la base de datos.');}), 3000);
-			}   		
-		closeDB();	
-		});		
-	}
+		// Si el valor de Redis requerido existe...	
+		if (redis_value) { 			
+			// Obtiene el valor de la base..
+			var select_query = "SELECT " + req.params.row + " FROM " + req.params.table + " order by " + req.params.row + " desc limit 1;";
+				con.query(select_query, function (error, results, fields) {
+				if (error) throw error;
+				// Si la consulta no vino vacia...		
+				if (results[0] != null) {
+					console.log('valor en DB = ', results[0][req.params.row]);
+					// Si el valor coincide...				
+					if (results[0][req.params.row] == redis_value) {			
+						console.log('El valor de ' + req.params.key + ' está correctamente configurado en Redis.');
+						closeDB(); 
+						setTimeout((function() {res.send(200, 'Chequeo de ' + req.params.key + ' exitoso.');}), 3000);
+					// Si el valor no coincide...				
+					} else {
+						console.log('El valor de ' + req.params.key + ' no está correctamente configurado en Redis.');
+						closeDB(); 
+						setTimeout((function() {res.send(404, 'Chequeo de ' + req.params.key + ' no exitoso. El valor configurado en Redis (' + redis_value + ') no se corresponde con el mayor valor en la base (' + results[0][req.params.row] + ').');}), 3000);
+					}
+				// Si en cambio, la consulta vino vacia...		
+				} else {	
+					console.log('No se encontró el valor requerido en la base de datos.');
+					closeDB(); 
+					setTimeout((function() {res.send(404, 'No se encontró el valor requerido en la base de datos.');}), 3000);
+				}   			
+			});		
+		} else {
+			closeDB(); 
+			setTimeout((function() {res.send(404, 'No se encontró la key solicitada de Redis.');}), 3000);
+		};
+
+	});       	
 }
 
 var server = restify.createServer();
@@ -473,8 +545,10 @@ server.post('/sites/tokenization', setTokenization);
 server.post('/sites/cs', setCS);
 server.post('/sites/dospasos', setDosPasos);
 server.post('/sites/porcentaje', setPorcentaje);
+server.post('/sites/mpos', setMPOS);
 
 server.post('/tests/db', checkDB);
+server.post('/tests/dbtx', checkDBbyTx);
 server.post('/tests/redis', checkRedis);
 
 server.del('/sites/subsites', deleteSubsite);
@@ -485,6 +559,7 @@ server.del('/sites/agregador', unsetAgregador);
 server.del('/sites/tokenization', unsetTokenization);
 server.del('/sites/dospasos', unsetDosPasos);
 server.del('/sites/porcentaje', unsetPorcentaje);
+server.del('/sites/mpos', unsetMPOS);
 
 // Ruta para reportar el último error via HTTP
 server.get('/healthcheck', version);
