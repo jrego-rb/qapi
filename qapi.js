@@ -253,6 +253,33 @@ function setPorcentaje(req, res, next) {
 	setTimeout((function() {res.send(200, 'El sitio fue editado con éxito.');}), 3000);	  		
 }
 
+// Un burdo copypaste de setPorcentaje(), pero desconsiderando el porcentaje para el sitio padre.
+function setPorcentajeWithoutFatherSitePercentage(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	// calcula el valor porcentual dependiendo de la cantidad de subsites, dejando margen para el site padre	
+	var count_query = "SELECT COUNT (DISTINCT idsubsite) AS total FROM spssites_subsites WHERE idsite = '" + site + "'";		
+
+	con.query(count_query, function (error, results, fields) {
+		if (error) throw error;				
+		var count = results[0].total;					
+		console.log('Se encontraron ' + String(count) + ' subsites registrados');	
+		valor_porcentaje = String(Math.floor(100 / count));
+		var update_query = "UPDATE spssites SET montoporcent = 'P' WHERE idsite = '" + site + "'";	
+		con.query(update_query, function (error, results, fields) {
+			if (error) throw error; 
+			console.log('Pago porcentual habilitado.');
+		});	
+		var update_query = "UPDATE spssites_subsites SET porcentaje = '" + valor_porcentaje + "', activo = 'S' WHERE idsite = '" + site + "'";
+		con.query(update_query, function (error, results, fields) {
+			if (error) throw error; 
+			console.log('Se le configuró a cada subsite un porcentaje de ' + valor_porcentaje + '%');
+		});
+		closeDB();	
+	});
+	setTimeout((function() {res.send(200, 'El sitio fue editado con éxito.');}), 3000);	  		
+}
+
 // Función para desactivar porcentaje en un sitio
 function unsetPorcentaje(req, res, next) {
 	connectDB();
@@ -545,6 +572,7 @@ server.post('/sites/tokenization', setTokenization);
 server.post('/sites/cs', setCS);
 server.post('/sites/dospasos', setDosPasos);
 server.post('/sites/porcentaje', setPorcentaje);
+server.post('/sites/porcentajeSinConsiderarSitioPadre', setPorcentajeWithoutFatherSitePercentage);
 server.post('/sites/mpos', setMPOS);
 
 server.post('/tests/db', checkDB);
