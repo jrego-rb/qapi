@@ -280,6 +280,11 @@ function setPorcentajeWithoutFatherSitePercentage(req, res, next) {
 	setTimeout((function() {res.send(200, 'El sitio fue editado con éxito.');}), 3000);	  		
 }
 
+// Función para devolver un VEP de prueba "1"
+function returnVEP_1(req, res, next){
+	res.send({ "id": 1, "title": "json-server", "author": "typicode" })
+}
+
 // Función para desactivar porcentaje en un sitio
 function unsetPorcentaje(req, res, next) {
 	connectDB();
@@ -588,6 +593,8 @@ server.del('/sites/tokenization', unsetTokenization);
 server.del('/sites/dospasos', unsetDosPasos);
 server.del('/sites/porcentaje', unsetPorcentaje);
 server.del('/sites/mpos', unsetMPOS);
+
+server.get('/vep/1', returnVEP_1)
 
 // Ruta para reportar el último error via HTTP
 server.get('/healthcheck', version);
