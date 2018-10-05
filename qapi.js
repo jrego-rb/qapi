@@ -561,9 +561,38 @@ function checkRedis(req, res, next) {
 	});       	
 }
 
+// Función para generar veps.
 function vepGenerator(req, res, next) {
 	var vep = { "payment":{ "amount":"30000", "currency":"ARS", "installments":1 }, "ticket_payment":{ "cuit":{ "authorizing":"20240215455", "taxpayer":"20240215455", "user":"20240215455", "owner":"20240215455" }, "cp":{ "payment_entity":"1002", "payer_bank":"389", "payment_format":1, "branch_office_type":8 }, "vep":{ "number":"000292454419", "advance_fee":"0", "fiscal_period":"201703", "concept":"19", "sub_concept":"19", "establishment":"0", "payment_description_extract":"MONOTR03/17", "payment_description":"Monotributo - Pago Mensual - Personas Fisicas", "payment_type":"1", "form":"152", "expiration_date":"2017-12-07 18:42:00", "creation_date":"2017-12-07 18:42:00", "due_date":"2017-12-07 18:42:00", "collecting_agency":"organismo recaudador", "description_concept":"sub con", "subconcept_description":"subconcept description", "owner_transaction_id":"asdf", "field_escription":"field_escription", "content_description":"content_description", "tax_description":"Tax description", "taxes":[ { "id":20, "amount":368 }, { "id":21, "amount":399.3 }, { "id":24, "amount":419 } ], "content":"1502021", "field_id":"3", "field_type":"N" } } };
 	res.send(200, vep);
+}
+
+// Función para activar el uso de URL dinámica: establece la URL dinámica con el campo "url" y el modo de PPB con el campo "mode".
+function setURLDinamica(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	url = req.params.url;
+	mode = req.params.mode;
+	var update_query = "UPDATE spssites SET usaurldinamica = 'S', urlpost = '"+url+"', reciberesuonline= '"+mode+"' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('URLDinamica activada.');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'El sitio fue editado con éxito.');}), 3000);	  		
+}
+
+// Función para desactivar el uso de URL dinámica. Vacía el valor del campo "urlpost". El modo de PPB no se modifica.
+function unsetURLDinamica(req, res, next) {
+	connectDB();
+	site = req.params.site;
+	var update_query = "UPDATE spssites SET usaurldinamica = 'N', urlpost = '' WHERE idsite = '" + site + "'";
+	con.query(update_query, function (error, results, fields) {
+		if (error) throw error; 
+		console.log('URLDinamica desactivada');
+	});	
+	closeDB();
+	setTimeout((function() {res.send(200, 'El sitio fue editado con éxito.');}), 3000);	  		
 }
 
 var server = restify.createServer();
@@ -580,6 +609,7 @@ server.post('/sites/dospasos', setDosPasos);
 server.post('/sites/porcentaje', setPorcentaje);
 server.post('/sites/porcentajeSinConsiderarSitioPadre', setPorcentajeWithoutFatherSitePercentage);
 server.post('/sites/mpos', setMPOS);
+server.post('/sites/urldinamica', setURLDinamica);
 
 server.post('/tests/db', checkDB);
 server.post('/tests/dbtx', checkDBbyTx);
@@ -594,6 +624,7 @@ server.del('/sites/tokenization', unsetTokenization);
 server.del('/sites/dospasos', unsetDosPasos);
 server.del('/sites/porcentaje', unsetPorcentaje);
 server.del('/sites/mpos', unsetMPOS);
+server.del('/sites/urldinamica', unsetURLDinamica);
 
 // Ruta para reportar el último error via HTTP
 server.get('/healthcheck', version);
