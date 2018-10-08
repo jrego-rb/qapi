@@ -567,13 +567,13 @@ function vepGenerator(req, res, next) {
 	res.send(200, vep);
 }
 
-// Función para activar el uso de URL dinámica: establece la URL dinámica con el campo "url" y el modo de PPB con el campo "mode".
+// Función para activar el uso de URL dinámica: vacía el valor del campo "urlpost". 
+// La tx debe incluir el campo "URLDINAMICA" ya que no lo establece el comercio. Se debe enviar el modo de PPB con el campo "mode".
 function setURLDinamica(req, res, next) {
 	connectDB();
 	site = req.params.site;
-	url = req.params.url;
 	mode = req.params.mode;
-	var update_query = "UPDATE spssites SET usaurldinamica = 'S', urlpost = '"+url+"', reciberesuonline= '"+mode+"' WHERE idsite = '" + site + "'";
+	var update_query = "UPDATE spssites SET usaurldinamica = 'S', urlpost = '', reciberesuonline= '"+mode+"' WHERE idsite = '" + site + "'";
 	con.query(update_query, function (error, results, fields) {
 		if (error) throw error; 
 		console.log('URLDinamica activada.');
@@ -582,11 +582,13 @@ function setURLDinamica(req, res, next) {
 	setTimeout((function() {res.send(200, 'El sitio fue editado con éxito.');}), 3000);	  		
 }
 
-// Función para desactivar el uso de URL dinámica. Vacía el valor del campo "urlpost". El modo de PPB no se modifica.
+// Función para desactivar el uso de URL dinámica. Se debe enviar un URLDINÁMICA que utilizarán todas las txs realizadas en este comercio, y enviar el modo de PPB con el campo "mode".
 function unsetURLDinamica(req, res, next) {
 	connectDB();
 	site = req.params.site;
-	var update_query = "UPDATE spssites SET usaurldinamica = 'N', urlpost = '' WHERE idsite = '" + site + "'";
+	url = req.params.url;
+	mode = req.params.mode;
+	var update_query = "UPDATE spssites SET usaurldinamica = 'N', urlpost = '"+url+"', reciberesuonline= '"+mode+"' WHERE idsite = '" + site + "'";
 	con.query(update_query, function (error, results, fields) {
 		if (error) throw error; 
 		console.log('URLDinamica desactivada');
